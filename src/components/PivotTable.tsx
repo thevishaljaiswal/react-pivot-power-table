@@ -1,14 +1,16 @@
+
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Download, BarChart3, PieChart, ArrowUpDown, Database } from 'lucide-react';
+import { Download, BarChart3, PieChart, ArrowUpDown, Database, Filter } from 'lucide-react';
 import { PivotChart } from './PivotChart';
 import { DateFilter, DateFilterConfig } from './DateFilter';
+import { FieldFilter, FieldFilterConfig } from './FieldFilter';
 import { exportToCSV } from '../utils/csvExport';
 import { aggregateData, createPivotMatrix } from '../utils/pivotUtils';
-import { filterDataByDate, getFilteredDataCount } from '../utils/dateFilter';
+import { filterDataByDate, filterDataByFields, getFilteredDataCount } from '../utils/dateFilter';
 
 interface DataRow {
   [key: string]: string | number;
@@ -30,11 +32,14 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
   const [showChart, setShowChart] = useState(false);
   const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
   const [dateFilter, setDateFilter] = useState<DateFilterConfig>({ type: 'all', value: null });
+  const [fieldFilters, setFieldFilters] = useState<FieldFilterConfig[]>([]);
 
-  // Filter data based on date filter
+  // Filter data based on date and field filters
   const filteredData = useMemo(() => {
-    return filterDataByDate(data, dateFilter);
-  }, [data, dateFilter]);
+    let result = filterDataByDate(data, dateFilter);
+    result = filterDataByFields(result, fieldFilters);
+    return result;
+  }, [data, dateFilter, fieldFilters]);
 
   // Get available fields from filtered data
   const fields = useMemo(() => {
@@ -134,7 +139,12 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
     setDateFilter(filter);
   };
 
-  const filteredRecordCount = getFilteredDataCount(data, dateFilter);
+  const handleFieldFiltersChange = (filters: FieldFilterConfig[]) => {
+    setFieldFilters(filters);
+  };
+
+  const filteredRecordCount = getFilteredDataCount(data, dateFilter, fieldFilters);
+  const hasActiveFilters = dateFilter.type !== 'all' || fieldFilters.length > 0;
 
   return (
     <div className="space-y-6">
@@ -144,16 +154,33 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
         currentFilter={dateFilter}
       />
 
+      {/* Field Filter */}
+      <FieldFilter 
+        data={data}
+        onFilterChange={handleFieldFiltersChange}
+        currentFilters={fieldFilters}
+      />
+
       {/* Filter Results Info */}
-      {dateFilter.type !== 'all' && (
+      {hasActiveFilters && (
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Database className="h-4 w-4" />
-              <span>
-                Showing {filteredRecordCount} of {data.length} records
-                {filteredRecordCount !== data.length && ' (filtered)'}
-              </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Database className="h-4 w-4" />
+                <span>
+                  Showing {filteredRecordCount} of {data.length} records
+                  {filteredRecordCount !== data.length && ' (filtered)'}
+                </span>
+              </div>
+              {(dateFilter.type !== 'all' || fieldFilters.length > 0) && (
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-600">
+                    {dateFilter.type !== 'all' ? 1 : 0} date filter{dateFilter.type !== 'all' && dateFilter.type !== 'relative' ? '' : 's'} + {fieldFilters.length} field filter{fieldFilters.length !== 1 ? 's' : ''} active
+                  </span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

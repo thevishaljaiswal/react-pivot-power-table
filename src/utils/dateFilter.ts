@@ -1,16 +1,21 @@
 
-import { format, getWeek, getYear, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parse } from 'date-fns';
+import { format, getWeek, getYear, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parse, subDays, startOfDay, endOfDay } from 'date-fns';
 
 export interface DataRow {
   [key: string]: string | number;
   date: string;
 }
 
-export type FilterType = 'date' | 'week' | 'month' | 'year' | 'all';
+export type FilterType = 'date' | 'week' | 'month' | 'year' | 'relative' | 'all';
 
 export interface DateFilterConfig {
   type: FilterType;
   value: string | Date | null;
+}
+
+export interface FieldFilterConfig {
+  field: string;
+  values: string[];
 }
 
 export function filterDataByDate(data: DataRow[], filter: DateFilterConfig): DataRow[] {
@@ -71,12 +76,53 @@ export function filterDataByDate(data: DataRow[], filter: DateFilterConfig): Dat
         }
         return false;
 
+      case 'relative':
+        if (typeof filter.value === 'string') {
+          const now = new Date();
+          
+          switch (filter.value) {
+            case 'last7days':
+              const sevenDaysAgo = startOfDay(subDays(now, 7));
+              const today = endOfDay(now);
+              return isWithinInterval(rowDate, { start: sevenDaysAgo, end: today });
+              
+            case 'thisMonth':
+              const monthStart = startOfMonth(now);
+              const monthEnd = endOfMonth(now);
+              return isWithinInterval(rowDate, { start: monthStart, end: monthEnd });
+              
+            case 'thisYear':
+              const yearStart = startOfYear(now);
+              const yearEnd = endOfYear(now);
+              return isWithinInterval(rowDate, { start: yearStart, end: yearEnd });
+              
+            default:
+              return true;
+          }
+        }
+        return false;
+
       default:
         return true;
     }
   });
 }
 
-export function getFilteredDataCount(data: DataRow[], filter: DateFilterConfig): number {
-  return filterDataByDate(data, filter).length;
+export function filterDataByFields(data: DataRow[], filters: FieldFilterConfig[]): DataRow[] {
+  if (filters.length === 0) {
+    return data;
+  }
+
+  return data.filter(row => {
+    return filters.every(filter => {
+      if (filter.values.length === 0) return true;
+      return filter.values.includes(String(row[filter.field]));
+    });
+  });
+}
+
+export function getFilteredDataCount(data: DataRow[], dateFilter: DateFilterConfig, fieldFilters: FieldFilterConfig[] = []): number {
+  let filteredData = filterDataByDate(data, dateFilter);
+  filteredData = filterDataByFields(filteredData, fieldFilters);
+  return filteredData.length;
 }

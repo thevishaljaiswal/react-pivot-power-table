@@ -10,8 +10,9 @@ import { Label } from '@/components/ui/label';
 import { CalendarIcon, Filter, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { QuickDateFilters } from './QuickDateFilters';
 
-export type FilterType = 'date' | 'week' | 'month' | 'year' | 'all';
+export type FilterType = 'date' | 'week' | 'month' | 'year' | 'relative' | 'all';
 
 export interface DateFilterConfig {
   type: FilterType;
@@ -163,10 +164,17 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, currentF
           Date Filter
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        {/* Quick Filters */}
+        <div>
+          <Label className="text-sm font-medium mb-2 block">Quick Filters:</Label>
+          <QuickDateFilters onFilterChange={onFilterChange} currentFilter={currentFilter} />
+        </div>
+
+        {/* Custom Filter */}
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <Label>Filter by:</Label>
+            <Label>Custom Filter:</Label>
             <Select value={currentFilter.type} onValueChange={handleFilterTypeChange}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue />
