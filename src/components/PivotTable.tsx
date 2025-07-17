@@ -1,16 +1,18 @@
-
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Download, BarChart3, PieChart, ArrowUpDown } from 'lucide-react';
+import { Download, BarChart3, PieChart, ArrowUpDown, Database } from 'lucide-react';
 import { PivotChart } from './PivotChart';
+import { DateFilter, DateFilterConfig } from './DateFilter';
 import { exportToCSV } from '../utils/csvExport';
 import { aggregateData, createPivotMatrix } from '../utils/pivotUtils';
+import { filterDataByDate, getFilteredDataCount } from '../utils/dateFilter';
 
 interface DataRow {
   [key: string]: string | number;
+  date: string;
 }
 
 interface PivotTableProps {
@@ -27,33 +29,39 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [showChart, setShowChart] = useState(false);
   const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
+  const [dateFilter, setDateFilter] = useState<DateFilterConfig>({ type: 'all', value: null });
 
-  // Get available fields from data
+  // Filter data based on date filter
+  const filteredData = useMemo(() => {
+    return filterDataByDate(data, dateFilter);
+  }, [data, dateFilter]);
+
+  // Get available fields from filtered data
   const fields = useMemo(() => {
-    if (data.length === 0) return [];
-    return Object.keys(data[0]);
-  }, [data]);
+    if (filteredData.length === 0) return [];
+    return Object.keys(filteredData[0]).filter(field => field !== 'date');
+  }, [filteredData]);
 
   // Get numeric fields for values
   const numericFields = useMemo(() => {
-    if (data.length === 0) return [];
+    if (filteredData.length === 0) return [];
     return fields.filter(field => 
-      data.some(row => typeof row[field] === 'number')
+      filteredData.some(row => typeof row[field] === 'number')
     );
-  }, [data, fields]);
+  }, [filteredData, fields]);
 
-  // Create pivot data
+  // Create pivot data using filtered data
   const pivotData = useMemo(() => {
     if (selectedRows.length === 0 || selectedValues.length === 0) return null;
     
     return createPivotMatrix(
-      data,
+      filteredData,
       selectedRows,
       selectedColumns,
       selectedValues,
       aggregationFunction
     );
-  }, [data, selectedRows, selectedColumns, selectedValues, aggregationFunction]);
+  }, [filteredData, selectedRows, selectedColumns, selectedValues, aggregationFunction]);
 
   // Sort pivot data
   const sortedPivotData = useMemo(() => {
@@ -122,8 +130,35 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
     }
   };
 
+  const handleDateFilterChange = (filter: DateFilterConfig) => {
+    setDateFilter(filter);
+  };
+
+  const filteredRecordCount = getFilteredDataCount(data, dateFilter);
+
   return (
     <div className="space-y-6">
+      {/* Date Filter */}
+      <DateFilter 
+        onFilterChange={handleDateFilterChange}
+        currentFilter={dateFilter}
+      />
+
+      {/* Filter Results Info */}
+      {dateFilter.type !== 'all' && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Database className="h-4 w-4" />
+              <span>
+                Showing {filteredRecordCount} of {data.length} records
+                {filteredRecordCount !== data.length && ' (filtered)'}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Configuration Panel */}
       <Card>
         <CardHeader>
