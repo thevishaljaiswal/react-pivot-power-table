@@ -77,6 +77,18 @@ export const SaveReportDialog: React.FC<SaveReportDialogProps> = ({
     }
   };
 
+  const getFilterTypeLabel = (type: DateFilterConfig['type']) => {
+    switch (type) {
+      case 'date': return 'Specific Date';
+      case 'week': return 'Week';
+      case 'month': return 'Month';
+      case 'year': return 'Year';
+      case 'relative': return 'Relative';
+      case 'all': return 'All Data';
+      default: return type;
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -110,7 +122,7 @@ export const SaveReportDialog: React.FC<SaveReportDialogProps> = ({
               <li>Columns: {selectedColumns.join(', ') || 'None'}</li>
               <li>Values: {selectedValues.join(', ') || 'None'}</li>
               <li>Aggregation: {aggregationFunction}</li>
-              <li>Date Filter: {dateFilter.type}</li>
+              <li>Date Filter: {getFilterTypeLabel(dateFilter.type)}</li>
               <li>Field Filters: {fieldFilters.length} active</li>
             </ul>
           </div>

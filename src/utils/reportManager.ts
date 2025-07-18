@@ -1,4 +1,7 @@
 
+import { DateFilterConfig } from '../components/DateFilter';
+import { FieldFilterConfig } from '../components/FieldFilter';
+
 export interface PivotReport {
   id: string;
   name: string;
@@ -9,14 +12,8 @@ export interface PivotReport {
     selectedColumns: string[];
     selectedValues: string[];
     aggregationFunction: 'sum' | 'count' | 'avg' | 'min' | 'max';
-    dateFilter: {
-      type: 'all' | 'specific' | 'week' | 'month' | 'year' | 'relative';
-      value: string | null;
-    };
-    fieldFilters: Array<{
-      field: string;
-      values: string[];
-    }>;
+    dateFilter: DateFilterConfig;
+    fieldFilters: FieldFilterConfig[];
   };
 }
 
