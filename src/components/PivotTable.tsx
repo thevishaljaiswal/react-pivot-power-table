@@ -1,16 +1,18 @@
-
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Download, BarChart3, PieChart, ArrowUpDown, Database, Filter } from 'lucide-react';
+import { Download, BarChart3, PieChart, ArrowUpDown, Database, Filter, FileText } from 'lucide-react';
 import { PivotChart } from './PivotChart';
 import { DateFilter, DateFilterConfig } from './DateFilter';
 import { FieldFilter, FieldFilterConfig } from './FieldFilter';
 import { exportToCSV } from '../utils/csvExport';
 import { aggregateData, createPivotMatrix } from '../utils/pivotUtils';
 import { filterDataByDate, filterDataByFields, getFilteredDataCount } from '../utils/dateFilter';
+import { SaveReportDialog } from './SaveReportDialog';
+import { ReportManager } from './ReportManager';
+import { useToast } from '@/hooks/use-toast';
 
 interface DataRow {
   [key: string]: string | number;
@@ -24,6 +26,7 @@ interface PivotTableProps {
 export type AggregationFunction = 'sum' | 'count' | 'avg' | 'min' | 'max';
 
 const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
+  const { toast } = useToast();
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
@@ -143,6 +146,27 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
     setFieldFilters(filters);
   };
 
+  const handleLoadReport = (config: {
+    selectedRows: string[];
+    selectedColumns: string[];
+    selectedValues: string[];
+    aggregationFunction: AggregationFunction;
+    dateFilter: DateFilterConfig;
+    fieldFilters: FieldFilterConfig[];
+  }) => {
+    setSelectedRows(config.selectedRows);
+    setSelectedColumns(config.selectedColumns);
+    setSelectedValues(config.selectedValues);
+    setAggregationFunction(config.aggregationFunction);
+    setDateFilter(config.dateFilter);
+    setFieldFilters(config.fieldFilters);
+    
+    toast({
+      title: "Report Loaded",
+      description: "Pivot table configuration has been applied",
+    });
+  };
+
   const filteredRecordCount = getFilteredDataCount(data, dateFilter, fieldFilters);
   const hasActiveFilters = dateFilter.type !== 'all' || fieldFilters.length > 0;
 
@@ -185,6 +209,29 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
           </CardContent>
         </Card>
       )}
+
+      {/* Report Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Saved Reports
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <ReportManager onLoadReport={handleLoadReport} />
+            <SaveReportDialog
+              selectedRows={selectedRows}
+              selectedColumns={selectedColumns}
+              selectedValues={selectedValues}
+              aggregationFunction={aggregationFunction}
+              dateFilter={dateFilter}
+              fieldFilters={fieldFilters}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Configuration Panel */}
       <Card>
