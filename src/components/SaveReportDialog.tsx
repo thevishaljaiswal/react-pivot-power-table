@@ -8,12 +8,14 @@ import { useToast } from '@/hooks/use-toast';
 import { reportManager, PivotReport } from '../utils/reportManager';
 import { DateFilterConfig } from './DateFilter';
 import { FieldFilterConfig } from './FieldFilter';
+import { ValueField } from '../utils/enhancedPivotUtils';
+import { ConversionConfig } from '../utils/conversionUtils';
 
 interface SaveReportDialogProps {
   selectedRows: string[];
   selectedColumns: string[];
-  selectedValues: string[];
-  aggregationFunction: 'sum' | 'count' | 'avg' | 'min' | 'max';
+  valueFields: ValueField[];
+  conversions: ConversionConfig[];
   dateFilter: DateFilterConfig;
   fieldFilters: FieldFilterConfig[];
   onReportSaved?: (report: PivotReport) => void;
@@ -22,8 +24,8 @@ interface SaveReportDialogProps {
 export const SaveReportDialog: React.FC<SaveReportDialogProps> = ({
   selectedRows,
   selectedColumns,
-  selectedValues,
-  aggregationFunction,
+  valueFields,
+  conversions,
   dateFilter,
   fieldFilters,
   onReportSaved
@@ -51,8 +53,8 @@ export const SaveReportDialog: React.FC<SaveReportDialogProps> = ({
         config: {
           selectedRows,
           selectedColumns,
-          selectedValues,
-          aggregationFunction,
+          valueFields,
+          conversions,
           dateFilter,
           fieldFilters,
         }
@@ -120,8 +122,8 @@ export const SaveReportDialog: React.FC<SaveReportDialogProps> = ({
             <ul className="list-disc list-inside mt-2 space-y-1">
               <li>Rows: {selectedRows.join(', ') || 'None'}</li>
               <li>Columns: {selectedColumns.join(', ') || 'None'}</li>
-              <li>Values: {selectedValues.join(', ') || 'None'}</li>
-              <li>Aggregation: {aggregationFunction}</li>
+              <li>Value Fields: {valueFields.map(vf => `${vf.field} (${vf.aggregation})`).join(', ') || 'None'}</li>
+              <li>Conversions: {conversions.length} active</li>
               <li>Date Filter: {getFilterTypeLabel(dateFilter.type)}</li>
               <li>Field Filters: {fieldFilters.length} active</li>
             </ul>

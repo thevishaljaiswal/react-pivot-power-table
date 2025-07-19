@@ -10,13 +10,15 @@ import { useToast } from '@/hooks/use-toast';
 import { reportManager, PivotReport } from '../utils/reportManager';
 import { DateFilterConfig } from './DateFilter';
 import { FieldFilterConfig } from './FieldFilter';
+import { ValueField } from '../utils/enhancedPivotUtils';
+import { ConversionConfig } from '../utils/conversionUtils';
 
 interface ReportManagerProps {
   onLoadReport: (config: {
     selectedRows: string[];
     selectedColumns: string[];
-    selectedValues: string[];
-    aggregationFunction: 'sum' | 'count' | 'avg' | 'min' | 'max';
+    valueFields: ValueField[];
+    conversions: ConversionConfig[];
     dateFilter: DateFilterConfig;
     fieldFilters: FieldFilterConfig[];
   }) => void;

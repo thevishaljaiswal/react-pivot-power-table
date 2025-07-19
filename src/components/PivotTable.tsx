@@ -7,9 +7,11 @@ import { Download, BarChart3, PieChart, ArrowUpDown, Database, Filter, FileText 
 import { PivotChart } from './PivotChart';
 import { DateFilter, DateFilterConfig } from './DateFilter';
 import { FieldFilter, FieldFilterConfig } from './FieldFilter';
+import { ValueFieldSelector } from './ValueFieldSelector';
 import { exportToCSV } from '../utils/csvExport';
-import { aggregateData, createPivotMatrix } from '../utils/pivotUtils';
+import { createEnhancedPivotMatrix, ValueField } from '../utils/enhancedPivotUtils';
 import { filterDataByDate, filterDataByFields, getFilteredDataCount } from '../utils/dateFilter';
+import { ConversionConfig, formatValueWithUnit, detectFieldType } from '../utils/conversionUtils';
 import { SaveReportDialog } from './SaveReportDialog';
 import { ReportManager } from './ReportManager';
 import { useToast } from '@/hooks/use-toast';
@@ -29,8 +31,8 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
   const { toast } = useToast();
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
-  const [selectedValues, setSelectedValues] = useState<string[]>([]);
-  const [aggregationFunction, setAggregationFunction] = useState<AggregationFunction>('sum');
+  const [valueFields, setValueFields] = useState<ValueField[]>([]);
+  const [conversions, setConversions] = useState<ConversionConfig[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [showChart, setShowChart] = useState(false);
   const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
@@ -60,16 +62,16 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
 
   // Create pivot data using filtered data
   const pivotData = useMemo(() => {
-    if (selectedRows.length === 0 || selectedValues.length === 0) return null;
+    if (selectedRows.length === 0 || valueFields.length === 0) return null;
     
-    return createPivotMatrix(
+    return createEnhancedPivotMatrix(
       filteredData,
       selectedRows,
       selectedColumns,
-      selectedValues,
-      aggregationFunction
+      valueFields,
+      conversions
     );
-  }, [filteredData, selectedRows, selectedColumns, selectedValues, aggregationFunction]);
+  }, [filteredData, selectedRows, selectedColumns, valueFields, conversions]);
 
   // Sort pivot data
   const sortedPivotData = useMemo(() => {
@@ -104,7 +106,7 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
     exportToCSV(sortedPivotData, 'pivot-table-export.csv');
   };
 
-  const addField = (field: string, type: 'rows' | 'columns' | 'values') => {
+  const addField = (field: string, type: 'rows' | 'columns') => {
     switch (type) {
       case 'rows':
         if (!selectedRows.includes(field)) {
@@ -116,24 +118,16 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
           setSelectedColumns([...selectedColumns, field]);
         }
         break;
-      case 'values':
-        if (!selectedValues.includes(field)) {
-          setSelectedValues([...selectedValues, field]);
-        }
-        break;
     }
   };
 
-  const removeField = (field: string, type: 'rows' | 'columns' | 'values') => {
+  const removeField = (field: string, type: 'rows' | 'columns') => {
     switch (type) {
       case 'rows':
         setSelectedRows(selectedRows.filter(f => f !== field));
         break;
       case 'columns':
         setSelectedColumns(selectedColumns.filter(f => f !== field));
-        break;
-      case 'values':
-        setSelectedValues(selectedValues.filter(f => f !== field));
         break;
     }
   };
@@ -149,15 +143,15 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
   const handleLoadReport = (config: {
     selectedRows: string[];
     selectedColumns: string[];
-    selectedValues: string[];
-    aggregationFunction: AggregationFunction;
+    valueFields: ValueField[];
+    conversions: ConversionConfig[];
     dateFilter: DateFilterConfig;
     fieldFilters: FieldFilterConfig[];
   }) => {
     setSelectedRows(config.selectedRows);
     setSelectedColumns(config.selectedColumns);
-    setSelectedValues(config.selectedValues);
-    setAggregationFunction(config.aggregationFunction);
+    setValueFields(config.valueFields || []);
+    setConversions(config.conversions || []);
     setDateFilter(config.dateFilter);
     setFieldFilters(config.fieldFilters);
     
@@ -224,8 +218,8 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
             <SaveReportDialog
               selectedRows={selectedRows}
               selectedColumns={selectedColumns}
-              selectedValues={selectedValues}
-              aggregationFunction={aggregationFunction}
+              valueFields={valueFields}
+              conversions={conversions}
               dateFilter={dateFilter}
               fieldFilters={fieldFilters}
             />
@@ -265,16 +259,6 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
                     >
                       → Columns
                     </Button>
-                    {numericFields.includes(field) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addField(field, 'values')}
-                        className="text-xs"
-                      >
-                        → Values
-                      </Button>
-                    )}
                     <span className="text-xs py-1 px-2 bg-gray-100 rounded flex-1">
                       {field}
                     </span>
@@ -318,41 +302,14 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
             </div>
           </div>
 
-          {/* Values and Aggregation */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Values</label>
-              <div className="space-y-1 min-h-[60px] border rounded-md p-2">
-                {selectedValues.map(field => (
-                  <Badge key={field} variant="default" className="mr-1">
-                    {field}
-                    <button
-                      onClick={() => removeField(field, 'values')}
-                      className="ml-1 text-xs hover:text-red-500"
-                    >
-                      ×
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Aggregation Function</label>
-              <Select value={aggregationFunction} onValueChange={(value: AggregationFunction) => setAggregationFunction(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sum">Sum</SelectItem>
-                  <SelectItem value="count">Count</SelectItem>
-                  <SelectItem value="avg">Average</SelectItem>
-                  <SelectItem value="min">Minimum</SelectItem>
-                  <SelectItem value="max">Maximum</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          {/* Value Fields with Individual Aggregation and Conversion */}
+          <ValueFieldSelector
+            availableFields={numericFields}
+            valueFields={valueFields}
+            conversions={conversions}
+            onValueFieldsChange={setValueFields}
+            onConversionsChange={setConversions}
+          />
 
           {/* Action Buttons */}
           <div className="flex gap-2 flex-wrap">
@@ -430,7 +387,7 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
                         <div className="font-medium text-xs">{header}</div>
                       </th>
                     ))}
-                    {selectedValues.length > 0 && (
+                    {valueFields.length > 0 && (
                       <th className="border p-2 text-center bg-gray-100 font-bold sticky right-0 z-20">
                         Total
                       </th>
@@ -447,32 +404,54 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
                       ))}
                       {sortedPivotData.columnHeaders.map(colHeader => (
                         <td key={colHeader} className="border p-2 text-center">
-                          {selectedValues.map((valueField, index) => (
-                            <div key={valueField} className={index > 0 ? 'mt-1 pt-1 border-t' : ''}>
-                              <span className="text-xs text-gray-600">{valueField}:</span>
-                              <span className="ml-1 font-medium">
-                                {typeof row.values[colHeader]?.[valueField] === 'number' 
-                                  ? row.values[colHeader][valueField].toLocaleString()
-                                  : row.values[colHeader]?.[valueField] || '-'
-                                }
-                              </span>
-                            </div>
-                          ))}
+                          {valueFields.map((valueField, index) => {
+                            const fieldKey = `${valueField.field}_${valueField.aggregation}`;
+                            const conversion = conversions.find(c => c.field === valueField.field);
+                            const value = row.values[colHeader]?.[fieldKey];
+                            
+                            return (
+                              <div key={fieldKey} className={index > 0 ? 'mt-1 pt-1 border-t' : ''}>
+                                <span className="text-xs text-gray-600">
+                                  {valueField.label || valueField.field} ({valueField.aggregation}):
+                                </span>
+                                <span className="ml-1 font-medium">
+                                  {typeof value === 'number' 
+                                    ? (conversion 
+                                        ? formatValueWithUnit(value, conversion.type, conversion.targetUnit)
+                                        : value.toLocaleString()
+                                      )
+                                    : value || '-'
+                                  }
+                                </span>
+                              </div>
+                            );
+                          })}
                         </td>
                       ))}
-                      {selectedValues.length > 0 && (
+                      {valueFields.length > 0 && (
                         <td className="border p-2 text-center font-bold bg-gray-50 sticky right-0 z-10">
-                          {selectedValues.map((valueField, index) => (
-                            <div key={valueField} className={index > 0 ? 'mt-1 pt-1 border-t' : ''}>
-                              <span className="text-xs text-gray-600">{valueField}:</span>
-                              <span className="ml-1">
-                                {typeof row.totals[valueField] === 'number' 
-                                  ? row.totals[valueField].toLocaleString()
-                                  : row.totals[valueField] || '-'
-                                }
-                              </span>
-                            </div>
-                          ))}
+                          {valueFields.map((valueField, index) => {
+                            const fieldKey = `${valueField.field}_${valueField.aggregation}`;
+                            const conversion = conversions.find(c => c.field === valueField.field);
+                            const value = row.totals[fieldKey];
+                            
+                            return (
+                              <div key={fieldKey} className={index > 0 ? 'mt-1 pt-1 border-t' : ''}>
+                                <span className="text-xs text-gray-600">
+                                  {valueField.label || valueField.field} ({valueField.aggregation}):
+                                </span>
+                                <span className="ml-1">
+                                  {typeof value === 'number' 
+                                    ? (conversion 
+                                        ? formatValueWithUnit(value, conversion.type, conversion.targetUnit)
+                                        : value.toLocaleString()
+                                      )
+                                    : value || '-'
+                                  }
+                                </span>
+                              </div>
+                            );
+                          })}
                         </td>
                       )}
                     </tr>
@@ -485,31 +464,53 @@ const PivotTable: React.FC<PivotTableProps> = ({ data }) => {
                       </td>
                       {sortedPivotData.columnHeaders.map(colHeader => (
                         <td key={colHeader} className="border p-2 text-center">
-                          {selectedValues.map((valueField, index) => (
-                            <div key={valueField} className={index > 0 ? 'mt-1 pt-1 border-t' : ''}>
-                              <span className="text-xs text-gray-600">{valueField}:</span>
-                              <span className="ml-1">
-                                {typeof sortedPivotData.grandTotals[colHeader]?.[valueField] === 'number' 
-                                  ? sortedPivotData.grandTotals[colHeader][valueField].toLocaleString()
-                                  : sortedPivotData.grandTotals[colHeader]?.[valueField] || '-'
-                                }
-                              </span>
-                            </div>
-                          ))}
+                          {valueFields.map((valueField, index) => {
+                            const fieldKey = `${valueField.field}_${valueField.aggregation}`;
+                            const conversion = conversions.find(c => c.field === valueField.field);
+                            const value = sortedPivotData.grandTotals[colHeader]?.[fieldKey];
+                            
+                            return (
+                              <div key={fieldKey} className={index > 0 ? 'mt-1 pt-1 border-t' : ''}>
+                                <span className="text-xs text-gray-600">
+                                  {valueField.label || valueField.field} ({valueField.aggregation}):
+                                </span>
+                                <span className="ml-1">
+                                  {typeof value === 'number' 
+                                    ? (conversion 
+                                        ? formatValueWithUnit(value, conversion.type, conversion.targetUnit)
+                                        : value.toLocaleString()
+                                      )
+                                    : value || '-'
+                                  }
+                                </span>
+                              </div>
+                            );
+                          })}
                         </td>
                       ))}
                       <td className="border p-2 text-center sticky right-0 z-10 bg-gray-100">
-                        {selectedValues.map((valueField, index) => (
-                          <div key={valueField} className={index > 0 ? 'mt-1 pt-1 border-t' : ''}>
-                            <span className="text-xs text-gray-600">{valueField}:</span>
-                            <span className="ml-1">
-                              {typeof sortedPivotData.overallTotals[valueField] === 'number' 
-                                ? sortedPivotData.overallTotals[valueField].toLocaleString()
-                                : sortedPivotData.overallTotals[valueField] || '-'
-                              }
-                            </span>
-                          </div>
-                        ))}
+                        {valueFields.map((valueField, index) => {
+                          const fieldKey = `${valueField.field}_${valueField.aggregation}`;
+                          const conversion = conversions.find(c => c.field === valueField.field);
+                          const value = sortedPivotData.overallTotals[fieldKey];
+                          
+                          return (
+                            <div key={fieldKey} className={index > 0 ? 'mt-1 pt-1 border-t' : ''}>
+                              <span className="text-xs text-gray-600">
+                                {valueField.label || valueField.field} ({valueField.aggregation}):
+                              </span>
+                              <span className="ml-1">
+                                {typeof value === 'number' 
+                                  ? (conversion 
+                                      ? formatValueWithUnit(value, conversion.type, conversion.targetUnit)
+                                      : value.toLocaleString()
+                                    )
+                                  : value || '-'
+                                }
+                              </span>
+                            </div>
+                          );
+                        })}
                       </td>
                     </tr>
                   )}

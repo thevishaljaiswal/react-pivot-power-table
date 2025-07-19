@@ -1,6 +1,8 @@
 
 import { DateFilterConfig } from '../components/DateFilter';
 import { FieldFilterConfig } from '../components/FieldFilter';
+import { ValueField } from './enhancedPivotUtils';
+import { ConversionConfig } from './conversionUtils';
 
 export interface PivotReport {
   id: string;
@@ -10,8 +12,8 @@ export interface PivotReport {
   config: {
     selectedRows: string[];
     selectedColumns: string[];
-    selectedValues: string[];
-    aggregationFunction: 'sum' | 'count' | 'avg' | 'min' | 'max';
+    valueFields: ValueField[];
+    conversions: ConversionConfig[];
     dateFilter: DateFilterConfig;
     fieldFilters: FieldFilterConfig[];
   };
