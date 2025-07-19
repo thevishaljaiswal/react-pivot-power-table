@@ -1,27 +1,27 @@
 
-import { PivotData } from './pivotUtils';
+import { EnhancedPivotData } from './enhancedPivotUtils';
 
-export function exportToCSV(data: PivotData, filename: string): void {
+export function exportToCSV(data: EnhancedPivotData, filename: string): void {
   const csvContent = generateCSVContent(data);
   downloadCSV(csvContent, filename);
 }
 
-function generateCSVContent(data: PivotData): string {
+function generateCSVContent(data: EnhancedPivotData): string {
   const rows: string[] = [];
   
   if (data.rows.length === 0) return '';
   
-  // Get row field names and value field names
+  // Get row field names and value field names  
   const rowFields = Object.keys(data.rows[0].data);
-  const valueFields = Object.keys(data.overallTotals);
+  const valueFieldKeys = Object.keys(data.overallTotals);
   
   // Create header row
   const headers = [
     ...rowFields,
     ...data.columnHeaders.flatMap(colHeader => 
-      valueFields.map(valueField => `${colHeader}_${valueField}`)
+      valueFieldKeys.map(valueFieldKey => `${colHeader}_${valueFieldKey}`)
     ),
-    ...valueFields.map(field => `Total_${field}`)
+    ...valueFieldKeys.map(fieldKey => `Total_${fieldKey}`)
   ];
   rows.push(headers.map(h => `"${h}"`).join(','));
   
@@ -32,14 +32,14 @@ function generateCSVContent(data: PivotData): string {
       ...rowFields.map(field => `"${row.data[field]}"`),
       // Column values
       ...data.columnHeaders.flatMap(colHeader =>
-        valueFields.map(valueField => {
-          const value = row.values[colHeader]?.[valueField] || 0;
+        valueFieldKeys.map(valueFieldKey => {
+          const value = row.values[colHeader]?.[valueFieldKey] || 0;
           return typeof value === 'number' ? value.toString() : `"${value}"`;
         })
       ),
       // Row totals
-      ...valueFields.map(valueField => {
-        const value = row.totals[valueField] || 0;
+      ...valueFieldKeys.map(valueFieldKey => {
+        const value = row.totals[valueFieldKey] || 0;
         return typeof value === 'number' ? value.toString() : `"${value}"`;
       })
     ];
@@ -53,14 +53,14 @@ function generateCSVContent(data: PivotData): string {
     ...Array(rowFields.length - 1).fill('""'),
     // Column grand totals
     ...data.columnHeaders.flatMap(colHeader =>
-      valueFields.map(valueField => {
-        const value = data.grandTotals[colHeader]?.[valueField] || 0;
+      valueFieldKeys.map(valueFieldKey => {
+        const value = data.grandTotals[colHeader]?.[valueFieldKey] || 0;
         return typeof value === 'number' ? value.toString() : `"${value}"`;
       })
     ),
     // Overall totals
-    ...valueFields.map(valueField => {
-      const value = data.overallTotals[valueField] || 0;
+    ...valueFieldKeys.map(valueFieldKey => {
+      const value = data.overallTotals[valueFieldKey] || 0;
       return typeof value === 'number' ? value.toString() : `"${value}"`;
     })
   ];

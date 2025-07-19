@@ -22,12 +22,12 @@ interface SaveReportDialogProps {
 }
 
 export const SaveReportDialog: React.FC<SaveReportDialogProps> = ({
-  selectedRows,
-  selectedColumns,
-  valueFields,
-  conversions,
+  selectedRows = [],
+  selectedColumns = [],
+  valueFields = [],
+  conversions = [],
   dateFilter,
-  fieldFilters,
+  fieldFilters = [],
   onReportSaved
 }) => {
   const [open, setOpen] = useState(false);
@@ -51,12 +51,12 @@ export const SaveReportDialog: React.FC<SaveReportDialogProps> = ({
       const report = reportManager.saveReport({
         name: reportName.trim(),
         config: {
-          selectedRows,
-          selectedColumns,
-          valueFields,
-          conversions,
-          dateFilter,
-          fieldFilters,
+          selectedRows: selectedRows || [],
+          selectedColumns: selectedColumns || [],
+          valueFields: valueFields || [],
+          conversions: conversions || [],
+          dateFilter: dateFilter || { type: 'all', value: null },
+          fieldFilters: fieldFilters || [],
         }
       });
 
@@ -120,12 +120,12 @@ export const SaveReportDialog: React.FC<SaveReportDialogProps> = ({
           <div className="text-sm text-gray-600">
             <p>This will save your current configuration:</p>
             <ul className="list-disc list-inside mt-2 space-y-1">
-              <li>Rows: {selectedRows.join(', ') || 'None'}</li>
-              <li>Columns: {selectedColumns.join(', ') || 'None'}</li>
-              <li>Value Fields: {valueFields.map(vf => `${vf.field} (${vf.aggregation})`).join(', ') || 'None'}</li>
-              <li>Conversions: {conversions.length} active</li>
-              <li>Date Filter: {getFilterTypeLabel(dateFilter.type)}</li>
-              <li>Field Filters: {fieldFilters.length} active</li>
+              <li>Rows: {(selectedRows || []).join(', ') || 'None'}</li>
+              <li>Columns: {(selectedColumns || []).join(', ') || 'None'}</li>
+              <li>Value Fields: {(valueFields || []).map(vf => `${vf.field} (${vf.aggregation})`).join(', ') || 'None'}</li>
+              <li>Conversions: {(conversions || []).length} active</li>
+              <li>Date Filter: {dateFilter ? getFilterTypeLabel(dateFilter.type) : 'None'}</li>
+              <li>Field Filters: {(fieldFilters || []).length} active</li>
             </ul>
           </div>
         </div>
