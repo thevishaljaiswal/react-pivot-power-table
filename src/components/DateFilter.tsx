@@ -16,7 +16,7 @@ export type FilterType = 'date' | 'week' | 'month' | 'year' | 'relative' | 'all'
 
 export interface DateFilterConfig {
   type: FilterType;
-  value: string | Date | null;
+  value: string | Date | { from: Date; to: Date } | null;
 }
 
 interface DateFilterProps {
@@ -25,8 +25,10 @@ interface DateFilterProps {
 }
 
 export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, currentFilter }) => {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    currentFilter.value instanceof Date ? currentFilter.value : undefined
+  const [selectedDateRange, setSelectedDateRange] = useState<{ from: Date; to: Date } | undefined>(
+    currentFilter.value && typeof currentFilter.value === 'object' && 'from' in currentFilter.value 
+      ? currentFilter.value 
+      : undefined
   );
   const [weekNumber, setWeekNumber] = useState<string>('');
   const [monthYear, setMonthYear] = useState<string>('');
@@ -34,16 +36,16 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, currentF
 
   const handleFilterTypeChange = (type: FilterType) => {
     onFilterChange({ type, value: null });
-    setSelectedDate(undefined);
+    setSelectedDateRange(undefined);
     setWeekNumber('');
     setMonthYear('');
     setYear('');
   };
 
-  const handleDateSelect = (date: Date | undefined) => {
-    if (date) {
-      setSelectedDate(date);
-      onFilterChange({ type: 'date', value: date });
+  const handleDateRangeSelect = (range: { from: Date; to: Date } | undefined) => {
+    if (range?.from && range?.to) {
+      setSelectedDateRange(range);
+      onFilterChange({ type: 'date', value: range });
     }
   };
 
@@ -70,7 +72,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, currentF
 
   const clearFilter = () => {
     onFilterChange({ type: 'all', value: null });
-    setSelectedDate(undefined);
+    setSelectedDateRange(undefined);
     setWeekNumber('');
     setMonthYear('');
     setYear('');
@@ -81,25 +83,27 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, currentF
       case 'date':
         return (
           <div className="flex items-center gap-2">
-            <Label>Select Date:</Label>
+            <Label>Select Date Range:</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   className={cn(
-                    "w-[200px] justify-start text-left font-normal",
-                    !selectedDate && "text-muted-foreground"
+                    "w-[280px] justify-start text-left font-normal",
+                    !selectedDateRange && "text-muted-foreground"
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                  {selectedDateRange?.from && selectedDateRange?.to 
+                    ? `${format(selectedDateRange.from, "PPP")} - ${format(selectedDateRange.to, "PPP")}`
+                    : "Pick a date range"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={handleDateSelect}
+                  mode="range"
+                  selected={selectedDateRange}
+                  onSelect={handleDateRangeSelect}
                   initialFocus
                   className="p-3 pointer-events-auto"
                 />
@@ -181,7 +185,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, currentF
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Data</SelectItem>
-                <SelectItem value="date">Specific Date</SelectItem>
+                <SelectItem value="date">Date Range</SelectItem>
                 <SelectItem value="week">Week</SelectItem>
                 <SelectItem value="month">Month</SelectItem>
                 <SelectItem value="year">Year</SelectItem>

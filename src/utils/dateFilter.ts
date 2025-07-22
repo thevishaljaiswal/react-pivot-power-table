@@ -10,7 +10,7 @@ export type FilterType = 'date' | 'week' | 'month' | 'year' | 'relative' | 'all'
 
 export interface DateFilterConfig {
   type: FilterType;
-  value: string | Date | null;
+  value: string | Date | { from: Date; to: Date } | null;
 }
 
 export interface FieldFilterConfig {
@@ -28,8 +28,8 @@ export function filterDataByDate(data: DataRow[], filter: DateFilterConfig): Dat
     
     switch (filter.type) {
       case 'date':
-        if (filter.value instanceof Date) {
-          return format(rowDate, 'yyyy-MM-dd') === format(filter.value, 'yyyy-MM-dd');
+        if (filter.value && typeof filter.value === 'object' && 'from' in filter.value && 'to' in filter.value) {
+          return isWithinInterval(rowDate, { start: startOfDay(filter.value.from), end: endOfDay(filter.value.to) });
         }
         return false;
 
