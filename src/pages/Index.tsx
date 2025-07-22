@@ -19,18 +19,22 @@ const sampleData = [
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            React Pivot Table with Date Filtering
-          </h1>
-          <p className="text-gray-600">
-            A powerful pivot table component with dynamic grouping, multiple aggregations, date filtering, export functionality, and chart visualization.
-          </p>
+          <div className="gradient-primary rounded-2xl p-8 text-white mb-8 shadow-glow">
+            <h1 className="text-4xl font-bold mb-3">
+              📊 React Pivot Table Analytics
+            </h1>
+            <p className="text-lg opacity-90">
+              A powerful pivot table component with dynamic grouping, multiple aggregations, date filtering, export functionality, and beautiful chart visualization.
+            </p>
+          </div>
         </div>
         
-        <PivotTable data={sampleData} />
+        <div className="glass-effect rounded-2xl p-6 shadow-xl border border-border/50">
+          <PivotTable data={sampleData} />
+        </div>
       </div>
     </div>
   );
