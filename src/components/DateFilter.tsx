@@ -42,10 +42,14 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, currentF
     setYear('');
   };
 
-  const handleDateRangeSelect = (range: { from: Date; to: Date } | undefined) => {
+  const handleDateRangeSelect = (range: { from: Date | undefined; to: Date | undefined } | undefined) => {
     if (range?.from && range?.to) {
-      setSelectedDateRange(range);
-      onFilterChange({ type: 'date', value: range });
+      const validRange = { from: range.from, to: range.to };
+      setSelectedDateRange(validRange);
+      onFilterChange({ type: 'date', value: validRange });
+    } else if (range?.from && !range?.to) {
+      // Allow partial selection during range selection
+      setSelectedDateRange(range as { from: Date; to: Date });
     }
   };
 
